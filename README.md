@@ -163,6 +163,9 @@ Across identical historical evaluation windows, the final LightGBM workflows con
 
 
 ### File Directory
+**ML Competition Report.docx**
+The final report detailing choices behind the model architecture, the data preprocessing and feature engineering, the iterative training process, self tests, results from Phase 1 of the competition, known limitations, and reproducibility actions.
+
 **fetch_extra_data.py** <br>
 Supplemental-data helper. It can fetch valuation, financial, and macro data and merge available features into the panel. Financials are shifted with an announcement lag to reduce leakage risk.
 
