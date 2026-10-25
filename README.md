@@ -67,7 +67,7 @@ This project builds on the [NYUSH-ML Spring 2026 CSI500 competition starter repo
 | [`organizer/score_submission.py`](organizer/score_submission.py) | [Original scoring utility](https://github.com/NYUSH-ML/ml-competition-sp26/blob/main/score_submission.py). Computes realized portfolio, benchmark, and excess returns. |
 | [`organizer/validate_submission.py`](organizer/validate_submission.py) | [Original submission validator](https://github.com/NYUSH-ML/ml-competition-sp26/blob/main/validate_submission.py). Checks holdings and portfolio-weight constraints. |
 
-**What was developed for this project:** The LightGBM iterations, engineered feature sets and robust training workflow, historical configuration sweep, portfolio-aware selection, self-ensemble generator, and associated experiment analysis. Those project-specific scripts are listed above, alongside the earlier model preserved under `intermediate/`. The comparison establishes which files are upstream copies, not the authorship of every line of project-specific code. AI-assisted coding and debugging are acknowledged below.
+**What was developed for this project:** The LightGBM iterations, engineered feature sets and robust training workflow, historical configuration sweep, portfolio-aware selection, self-ensemble generator, and associated experiment analysis. Those project-specific scripts are listed above, alongside the earlier model preserved under `intermediate/`. The comparison establishes which files are upstream copies, not the authorship of every line of project-specific code.
 
 See [`organizer/README.md`](organizer/README.md) for a provenance note and upstream supporting files such as `features.py`, `download_data.py`, and `requirements.txt`.
 
