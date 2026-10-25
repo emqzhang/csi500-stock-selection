@@ -1,23 +1,103 @@
-## Project Overview
+# CSI500 Stock Selection — LightGBM Portfolio Optimization
 
-This project developed a machine-learning pipeline for **short-horizon stock selection within the CSI500 universe** as part of the Spring 2026 CSCI-SHU 360 Machine Learning competition. The objective was to construct a valid long-only portfolio capable of outperforming the CSI500 benchmark over short live evaluation windows.
+**Spring 2026 · CSCI-SHU 360 Machine Learning Competition**
 
-Starting from the competition-provided XGBoost baseline, I iteratively developed a more robust **LightGBM-based stock-ranking and portfolio-construction pipeline**. The final workflow combines cross-sectional return prediction, engineered momentum and risk features, recency-weighted training, regime-aware signals, model ensembling, and portfolio-level hyperparameter optimization.
+A stock-selection and portfolio-construction pipeline built to select a **long-only portfolio of CSI500 constituents** and evaluate its short-horizon **excess return over the CSI500 index**. Starting from an **organizer-provided XGBoost baseline**, the project developed a LightGBM workflow with engineered market features, time-aware training, robust loss, portfolio-level model selection, and a multi-configuration self-ensemble.
 
-Rather than optimizing only predictive metrics such as Rank IC, the project ultimately treated **portfolio construction itself as part of the machine-learning problem**, selecting models based on realized excess return against the CSI500 benchmark.
+> **Repository orientation:** The final submitted portfolio is [`results/final_self_ensemble.csv`](results/final_self_ensemble.csv). Start with [`generate_and_ensemble_candidates.py`](generate_and_ensemble_candidates.py) for the Phase 2 workflow, or [`model_v2_portfolio_aware_safe.py`](model_v2_portfolio_aware_safe.py) for a single portfolio. The full research write-up is in [`docs/ML Competition Report.docx`](docs/ML%20Competition%20Report.docx).
+
+## Results at a glance
+
+The table reports **four historical, time-ordered self-test windows** shared by all methods. Excess return means portfolio return minus the CSI500 benchmark return over the same holding period; it is not the portfolio's absolute return.
+
+| Model/workflow | Average portfolio return | Average excess return | Median excess | Worst excess | Best excess | Positive windows |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Competition XGBoost baseline | +3.316% | +0.920% | +0.922% | −1.275% | +3.109% | 3/4 (75%) |
+| **Phase 1 selected LightGBM** | **+3.602%** | **+1.207%** | +1.174% | +0.192% | +2.287% | **4/4 (100%)** |
+| Phase 2 LightGBM self-ensemble | +3.435% | +1.039% | +1.032% | +0.122% | +1.970% | **4/4 (100%)** |
+
+The Phase 1 live submission returned approximately **+6.99%**, versus approximately **+5.8%** for the class average and **+7.8%** for the class ensemble. Seeing the benefit of aggregation motivated the Phase 2 self-ensemble. Results are from small evaluation samples and are **not evidence of guaranteed future returns**.
+
+## Repository structure
+
+```text
+csi500-stock-selection/
+├── README.md                              # Project overview and file guide
+├── model_v2_portfolio_aware_safe.py       # Final leakage-aware, single-portfolio model
+├── generate_and_ensemble_candidates.py    # Phase 2 portfolio self-ensemble
+├── sweep_portfolio_aware_checked.py       # Historical portfolio-configuration sweep
+├── self_test_portfolios.py               # Score already-generated portfolios by window
+├── fetch_extra_data.py                   # Optional supplemental valuation/financial/macro data
+├── results/
+│   └── final_self_ensemble.csv            # Tracked, final Phase 2 submission (50 stocks)
+├── organizer/
+│   ├── README.md                          # Source attribution and upstream links
+│   ├── baseline_xgboost.py                # Organizer baseline with path adaptation
+│   ├── score_submission.py                # Organizer scorer with path adaptation
+│   └── validate_submission.py             # Unmodified organizer submission validator
+├── intermediate/
+│   ├── README.md                          # Historical model and generated scratch outputs
+│   └── model_v2.py                        # Earlier LightGBM feature/ensemble development
+│   # candidates/, sweep_portfolios/, diagnostics/ are created as needed
+└── docs/
+    ├── ML Competition Report.docx         # Full report, experiments, methodology, limitations
+    └── REPRODUCIBILITY_README.pdf          # Original reproducibility handout (legacy paths)
+
+# Local/generated rather than committed:
+# data/ (prices.parquet, index.parquet, constituents.csv, optional extra data)
+```
+
+### Main scripts
+
+| File | Purpose |
+| --- | --- |
+| [`model_v2_portfolio_aware_safe.py`](model_v2_portfolio_aware_safe.py) | Trains robust LightGBM models, supports Huber/LambdaRank objectives, date-safe historical portfolio generation, top-*k* selection, liquidity/risk filters, and alternative weighting schemes. |
+| [`generate_and_ensemble_candidates.py`](generate_and_ensemble_candidates.py) | Generates and validates multiple strong candidate portfolios; averages their weights, chooses consensus holdings, applies the 10% cap, and writes the final ensemble CSV. |
+| [`sweep_portfolio_aware_checked.py`](sweep_portfolio_aware_checked.py) | Tests combinations of portfolio size, loss, weighting, and filtering across specified historical windows, validates outputs, and records performance tables. |
+| [`self_test_portfolios.py`](self_test_portfolios.py) | Scores **existing** portfolios over later historical windows; does not train or regenerate portfolios. |
+| [`fetch_extra_data.py`](fetch_extra_data.py) | Optionally downloads valuation, quarterly financial, and macroeconomic indicators using AkShare. Financial information should only enter training with a realistic announcement lag. |
+
+### Organizer-provided code and attribution
+
+This project builds on the [NYUSH-ML Spring 2026 CSI500 competition starter repository](https://github.com/NYUSH-ML/ml-competition-sp26). The following **three files were byte-for-byte copies** of the organizer's `main` branch before reorganization (verified October 25, 2026). Two receive a minimal data-path change solely to support their new directory. They are **not original implementations** in this project:
+
+| File | Source and use |
+| --- | --- |
+| [`organizer/baseline_xgboost.py`](organizer/baseline_xgboost.py) | [Original XGBoost baseline](https://github.com/NYUSH-ML/ml-competition-sp26/blob/main/baseline_xgboost.py). Starting-point benchmark; imports `features.py` from the upstream repository (not bundled here). |
+| [`organizer/score_submission.py`](organizer/score_submission.py) | [Original scoring utility](https://github.com/NYUSH-ML/ml-competition-sp26/blob/main/score_submission.py). Computes realized portfolio, benchmark, and excess returns. |
+| [`organizer/validate_submission.py`](organizer/validate_submission.py) | [Original submission validator](https://github.com/NYUSH-ML/ml-competition-sp26/blob/main/validate_submission.py). Checks holdings and portfolio-weight constraints. |
+
+**What was developed for this project:** The LightGBM iterations, engineered feature sets and robust training workflow, historical configuration sweep, portfolio-aware selection, self-ensemble generator, and associated experiment analysis. Those project-specific scripts are listed above, alongside the earlier model preserved under `intermediate/`. The comparison establishes which files are upstream copies, not the authorship of every line of project-specific code. AI-assisted coding and debugging are acknowledged below.
+
+See [`organizer/README.md`](organizer/README.md) for a provenance note and upstream supporting files such as `features.py`, `download_data.py`, and `requirements.txt`.
+
+### Results, intermediate artifacts, and documentation
+
+| Path | Contents |
+| --- | --- |
+| [`results/final_self_ensemble.csv`](results/final_self_ensemble.csv) | **Final submitted Phase 2 portfolio**: 50 CSI500 stock codes and associated normalized portfolio weights (`stock_code`, `weight`). This is the key output stored in Git. |
+| `results/portfolio_sweep_checked_results.csv` | Generated detailed historical sweep results: per-window/per-configuration scores (not included in the current checkout). |
+| `results/portfolio_sweep_checked_summary.csv` | Generated configuration-level performance summary from the sweep (not included). |
+| `results/portfolio_sweep_checked_results.json` | Generated machine-readable sweep results (not included). |
+| `results/self_test_portfolio_results.csv` and `*_summary.csv` | Generated self-test tables when running `self_test_portfolios.py` (not included). |
+| [`intermediate/model_v2.py`](intermediate/model_v2.py) | Earlier LightGBM version with cross-sectional targets, robust loss, recency weighting, beta/regime features, and a five-seed ensemble; retained as development history, not the final model. |
+| `intermediate/candidates/` | Temporary CSV portfolios produced for individual ensemble configurations; generated on demand and ignored by Git. |
+| `intermediate/sweep_portfolios/` | Temporary portfolios from historical sweep runs; generated on demand and ignored by Git. |
+| `intermediate/diagnostics/` | Feature importances and ensemble consensus diagnostics; generated on demand and ignored by Git. |
+| [`docs/ML Competition Report.docx`](docs/ML%20Competition%20Report.docx) | Detailed technical report explaining the research progression, experimental decisions, test results, and caveats. |
+| [`docs/REPRODUCIBILITY_README.pdf`](docs/REPRODUCIBILITY_README.pdf) | Archived competition reproducibility instructions; **some paths refer to the original folder layout**. Use the commands in this README for the reorganized structure. |
 
 ## Methodology
 
-### Target Construction
+### Cross-sectional target and features
 
-The model predicts the **cross-sectional z-score of 5-day forward returns** rather than raw future returns.
+For each stock *i* on date *t*, define its five-trading-day return as
 
-For stock *i* at time *t*:
 <p align="center">
   <b>r<sub>i,t</sub><sup>(5)</sup> = P<sub>i,t+5</sub> / P<sub>i,t</sub> - 1</b>
 </p>
 
-The returns are then standardized within each trading date:
+Then standardize those forward returns **within each trading date**:
 
 <p align="center">
   <b>z<sub>i,t</sub> = (r<sub>i,t</sub><sup>(5)</sup> - μ<sub>t</sub>) / σ<sub>t</sub></b>
@@ -29,157 +109,61 @@ where:
 - **μ<sub>t</sub>** = mean 5-day forward return across all stocks on date *t*
 - **σ<sub>t</sub>** = standard deviation of 5-day forward returns across all stocks on date *t*
 
-
-This reframes the problem from predicting whether the market will rise or fall to predicting **which CSI500 stocks are likely to outperform their peers**, which better matches the benchmark-relative competition objective.
-
-### Feature Engineering
-
-The LightGBM models use a broad collection of market-derived features designed to capture multiple weak but complementary signals:
-
-- Multi-horizon momentum: 3-, 5-, 10-, 20-, and 60-day returns
-- Skip-one momentum
-- Volatility-adjusted momentum
-- Short-term reversal
-- Realized and range volatility
-- Drawdowns and distance from 52-week highs
-- Volume and liquidity trends
-- Turnover abnormality
-- Amihud-style illiquidity
-- Suspension / stale-trading proxies
-- Moving-average distance
-- RSI, overnight gaps, and intraday returns
-- CSI500-relative alpha
-- Market-relative volatility
-- Rolling beta and idiosyncratic returns
-- Market-regime interactions
-
-The model therefore does not rely on a single trading factor; instead, LightGBM learns nonlinear interactions among momentum, volatility, liquidity, market-relative behavior, and changing market regimes.
-
-### Model Training
-
-The strongest model family used **LightGBM regression with Huber loss** on winsorized forward-return z-scores.
-
-Several design decisions were introduced to improve robustness:
-
-- **Huber loss** reduces sensitivity to extreme short-horizon returns.
-- **Label winsorization at ±3 standard deviations** prevents extreme price moves from dominating training.
-- **Exponential recency weighting** gives greater importance to recent market conditions.
-- A **180-day rolling training window** balances sample size against regime staleness.
-- A **5-day embargo** prevents overlap between forward-return labels and validation periods.
-- Predictions are averaged across **five LightGBM models using seeds 42–46** to reduce stochastic model variance.
-
-### No-Leakage Validation
-
-All historical experiments used time-aware evaluation.
-
-For each backtest:
-
-1. Features and labels were restricted to information available before the historical `as-of` date.
-2. A portfolio was generated using only past data.
-3. The portfolio was evaluated exclusively on later trading dates.
-4. Training and validation labels were additionally capped to prevent 5-day forward-return labels from crossing the historical portfolio-construction date.
-
-This avoids look-ahead bias and ensures that the reported performance could have been produced in real time.
-
-## Portfolio Optimization
-
-Because the competition score depended on **realized portfolio excess return**, portfolio construction was optimized alongside the predictive model.
-
-I ran a **240-experiment portfolio sweep** across:
-
-- `top_k ∈ {30, 40, 50, 60, 80}`
-- `objective ∈ {Huber, LambdaRank}`
-- `weight_method ∈ {rank, equal, volatility-adjusted}`
-- `filter_mode ∈ {none, liquidity/risk filter}`
-- 4 historical no-leakage evaluation windows
-
-Each generated portfolio was validated against the competition constraints and then evaluated using realized excess return against the CSI500.
-
-### Main Findings
-
-The experiments produced several consistent findings:
-
-- **Huber regression substantially outperformed LambdaRank.**
-- **Top-30 and Top-40 portfolios generally performed best**, suggesting that useful predictive signal was concentrated near the top of the ranking.
-- **Rank weighting outperformed equal and volatility-adjusted weighting**, indicating that the model's ordering among selected stocks contained useful information.
-- Liquidity/risk filtering slightly reduced upside but improved worst-window downside, making it useful as a risk-control mechanism. 
-
-The highest-mean individual configuration was:
-
-| Configuration | Mean Excess Return | Median | Worst Window | Best Window |
-|---|---:|---:|---:|---:|
-| Top-30, Huber, Rank Weighting, No Filter | **+1.643%** | +1.775% | -0.662% | +3.685% |
-| Top-30, Huber, Rank Weighting, Filter | **+1.505%** | +1.695% | -0.260% | +2.889% |
-
-For the Phase 1 competition submission, I selected the **filtered Top-30 Huber/rank configuration** because it preserved most of the expected upside while substantially reducing observed downside.
-
-## Phase 2 Self-Ensemble
-
-The Phase 1 live portfolio returned approximately **+6.99%**, outperforming the class average of roughly **+5.8%**, although it trailed the class-wide ensemble return of approximately **+7.8%**.
-
-This suggested that the LightGBM pipeline contained useful signal but could benefit from additional variance reduction.
-
-For Phase 2, I therefore constructed a **self-ensemble of several high-performing LightGBM portfolio configurations**.
-
-The ensemble:
-
-1. Generates several strong candidate portfolios.
-2. Averages their portfolio weights.
-3. Rewards stocks repeatedly selected by multiple models.
-4. Retains the strongest consensus positions.
-5. Caps individual weights at 10%.
-6. Renormalizes the final portfolio.
-
-The resulting ensemble used approximately 50 stocks at the portfolio level, providing more diversification than the aggressive Top-30 strategy while retaining exposure to high-consensus predictions. Also combats potential overfitting on previous stock data.
-
-## Results
-
-Historical performance was evaluated across four identical no-leakage windows for the original XGBoost baseline, the selected Phase 1 LightGBM model, and the Phase 2 self-ensemble.
-
-| Model | Avg. Portfolio Return | Avg. Excess Return | Median Excess | Worst | Best | Hit Rate |
-|---|---:|---:|---:|---:|---:|---:|
-| XGBoost Baseline | +3.316% | **+0.920%** | +0.922% | -1.275% | +3.109% | 75% |
-| Phase 1 LightGBM | **+3.602%** | **+1.207%** | +1.174% | +0.192% | +2.287% | **100%** |
-| Phase 2 Self-Ensemble | +3.435% | **+1.039%** | +1.032% | +0.122% | +1.970% | **100%** |
-
-The Phase 1 model improved average excess return from **+0.920% to +1.207%** relative to the XGBoost baseline while eliminating negative excess-return windows in the historical test set.
-
-The Phase 2 self-ensemble produced slightly lower mean excess return than the Phase 1 single model, but also achieved a **100% historical hit rate** while intentionally reducing reliance on any single aggressive configuration.
-
-## Key Takeaways
-
-This project evolved from a straightforward stock-return prediction task into a broader **portfolio-aware machine-learning system**.
-
-The main lessons were:
-
-- Benchmark-relative prediction benefited from **cross-sectional targets** rather than raw returns.
-- Robust regression with **Huber loss** performed better than a direct ranking objective.
-- Predictive performance alone was insufficient; the **portfolio construction rule materially affected realized results**.
-- Concentrated Top-30 portfolios captured more alpha than highly diversified portfolios.
-- Time-aware validation and embargo periods were critical for avoiding look-ahead leakage.
-- Model and portfolio ensembling provided a practical way to reduce variance in a noisy financial prediction problem.
-
-Across identical historical evaluation windows, the final LightGBM workflows consistently improved upon the provided XGBoost baseline while preserving a fully reproducible, no-leakage evaluation pipeline.
+This targets relative stock selection rather than simply forecasting whether the broad market will rise. Signals include multi-horizon momentum and reversal, volatility, drawdowns, volume and liquidity, moving-average distance, RSI/gap indicators, CSI500-relative alpha, rolling beta, and market-regime interactions.
 
 
-### File Directory
-**ML Competition Report.docx**
-The final report detailing choices behind the model architecture, the data preprocessing and feature engineering, the iterative training process, self tests, results from Phase 1 of the competition, known limitations, and reproducibility actions.
+### Training and leakage controls
 
-**fetch_extra_data.py** <br>
-Supplemental-data helper. It can fetch valuation, financial, and macro data and merge available features into the panel. Financials are shifted with an announcement lag to reduce leakage risk.
+- **LightGBM Huber regression** on clipped cross-sectional z-score targets reduced sensitivity to extreme observations; the sweep also evaluated LambdaRank.
+- **Exponential recency weights** and an approximately **180-day training window** emphasized more recent trading regimes.
+- **Five seeds (42–46)** reduced stochastic training variance through prediction averaging.
+- **Time-based splits, a five-trading-day embargo, and historical as-of label cutoffs** prevent validation targets or training labels from reaching into information not available at prediction time.
+- Historical portfolios are generated at the stated **as-of** date and evaluated only over **later** trading days. Scoring a portfolio generated with future data on an earlier window is invalid.
 
-**final_self_ensemble.csv** <br>
-The final portfolio submission to the competition. csv file of 50 stocks with their respective weights
+### Portfolio construction and experiments
 
-**generate_and_ensemble_candidates.py** <br>
-Final Phase 2 ensemble generator. It trains/generates several candidate portfolios, validates each one, averages candidate weights, keeps top aggregate names, re-caps, normalizes, and validates the final ensemble.
+The 240-run experiment swept five values of `top_k` (30, 40, 50, 60, 80), two training objectives (Huber and LambdaRank), three weighting methods (rank, equal, volatility-adjusted), two filter settings, and four historical evaluation windows. The highest mean in that sweep was **+1.643% excess** for the unfiltered top-30 Huber/rank strategy, but its worst window was **−0.662%**. The filtered variant achieved **+1.505% mean excess** with a smaller worst-window loss (**−0.260%**), so it was selected for Phase 1.
 
-**model_v2_portfolio_aware_safe.py** <br>
-Final safe single-configuration model script. It adds portfolio-aware options such as top-k, filtering, weighting method, LambdaRank comparison, and label-safe historical as-of behavior.
+For Phase 2, the workflow generated several related LightGBM configurations, combined their portfolio weights, retained the **50 strongest aggregate positions**, capped each position at 10%, and renormalized the total to one. This intentionally traded some concentration for stronger consensus and diversification.
 
-**self_test_portfolios.py** <br>
+## Running the pipeline
 
+**What is missing:** This public repository contains the project-specific code, three credited organizer scripts, and the final submission, **not** the competition's input market-data files. Provide the original data under `data/` before running inference, sweeps, or scoring. The organizer publishes [`download_data.py`](https://github.com/NYUSH-ML/ml-competition-sp26/blob/main/download_data.py), [`features.py`](https://github.com/NYUSH-ML/ml-competition-sp26/blob/main/features.py), and [`requirements.txt`](https://github.com/NYUSH-ML/ml-competition-sp26/blob/main/requirements.txt), but these are **not included** here. To run the unmodified organizer baseline, place the upstream `features.py` next to `organizer/baseline_xgboost.py` locally (or use the complete upstream checkout). Consequently, the checkout is an example of the research code and submitted artifact, not a complete one-command reproduction package.
 
-**sweep_portfolio_aware_checked.py** <br>
-Runs the 240-configuration sweep by repeatedly calling the safe model, validating portfolios, scoring with score_submission.py, and recording results. It checks ASOF < START and valid trading dates.
+1. From the repository root, install the applicable Python dependencies, including `numpy`, `pandas`, `pyarrow`, `scipy`, `lightgbm`, and (for optional extra-data fetching) `akshare`. The older XGBoost baseline additionally needs `xgboost` and its missing `features.py` module.
+2. Place the competition-provided `prices.parquet`, `index.parquet`, and `constituents.csv` in `data/` in the formats expected by the source scripts.
+3. Run any of the following examples **from the repository root**. Adjust `--as-of` and historical windows to match dates available in your own data.
+
+```bash
+# Recreate an individual Phase 1-style filtered portfolio
+python model_v2_portfolio_aware_safe.py \
+  --as-of 20260430 --top-k 30 --objective huber \
+  --weight-method rank --filter-universe \
+  --out results/phase1_recreated.csv
+python organizer/validate_submission.py results/phase1_recreated.csv
+
+# Create Phase 2 ensemble from multiple candidate portfolios
+# Select an as-of date actually available in your local data.
+python generate_and_ensemble_candidates.py --as-of 20260430 \
+  --final-out results/ensemble_recreated.csv
+python organizer/validate_submission.py results/ensemble_recreated.csv
+
+# Re-run the original historical portfolio sweep (computationally intensive)
+python sweep_portfolio_aware_checked.py \
+  --windows 20260403:20260407:20260410 \
+            20260410:20260414:20260417 \
+            20260417:20260421:20260424 \
+            20260424:20260427:20260430 \
+  --top-k 30 40 50 60 80 \
+  --objectives huber lambdarank \
+  --weight-methods rank vol_adjusted equal \
+  --filter-modes none filter --no-ensemble
+```
+
+The ensemble script's defaults now write **candidate CSVs to `intermediate/candidates/`** and its final output to `results/final_self_ensemble.csv`; if you want to preserve the tracked competition submission, specify a different `--final-out` as in the example above. Sweeps write temporary portfolios to `intermediate/sweep_portfolios/` and score tables to `results/`. The ensemble generator, sweep runner, and self-test wrapper default to calling `organizer/validate_submission.py` and/or `organizer/score_submission.py`. Invoke commands from the repository root.
+
+## Limitations and Credits
+
+Only four independent historical windows were used for the comparisons, and choosing among many tested configurations increases selection/overfitting risk. Real trading would also require explicit modeling of transaction costs, slippage, liquidity, and market impact. External financial data availability was inconsistent. This is a competition research project, **not trading or investment advice**.
+
+Organizer-provided code is credited above. The prediction models were trained on historical market data, and portfolio weights were generated by the program rather than prompting an LLM to choose stocks.
