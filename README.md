@@ -22,26 +22,27 @@ The Phase 1 live submission returned approximately **+6.99%**, versus approximat
 
 ```text
 csi500-stock-selection/
-├── README.md                              # Project overview and file guide
-├── model_v2_portfolio_aware_safe.py       # Final leakage-aware, single-portfolio model
-├── generate_and_ensemble_candidates.py    # Phase 2 portfolio self-ensemble
-├── sweep_portfolio_aware_checked.py       # Historical portfolio-configuration sweep
-├── self_test_portfolios.py               # Score already-generated portfolios by window
-├── fetch_extra_data.py                   # Optional supplemental valuation/financial/macro data
-├── results/
-│   └── final_self_ensemble.csv            # Tracked, final Phase 2 submission (50 stocks)
+├── docs/
+│   ├── ML Competition Report.docx         # Full report, experiments, methodology, limitations
+│   └── REPRODUCIBILITY_README.pdf         # Original reproducibility handout (legacy paths)
+├── intermediate/
+│   ├── README.md                          # Historical model and generated scratch outputs
+│   └── model_v2.py                        # Earlier LightGBM feature/ensemble development
+│   # candidates/, sweep_portfolios/, diagnostics/ are created as needed
 ├── organizer/
 │   ├── README.md                          # Source attribution and upstream links
 │   ├── baseline_xgboost.py                # Organizer baseline with path adaptation
 │   ├── score_submission.py                # Organizer scorer with path adaptation
 │   └── validate_submission.py             # Unmodified organizer submission validator
-├── intermediate/
-│   ├── README.md                          # Historical model and generated scratch outputs
-│   └── model_v2.py                        # Earlier LightGBM feature/ensemble development
-│   # candidates/, sweep_portfolios/, diagnostics/ are created as needed
-└── docs/
-    ├── ML Competition Report.docx         # Full report, experiments, methodology, limitations
-    └── REPRODUCIBILITY_README.pdf          # Original reproducibility handout (legacy paths)
+├── results/
+│   └── final_self_ensemble.csv            # Tracked, final Phase 2 submission (50 stocks)
+├── README.md                              # Project overview and file guide
+├── fetch_extra_data.py                    # Optional supplemental valuation/financial/macro data
+├── generate_and_ensemble_candidates.py    # Phase 2 portfolio self-ensemble
+├── model_v2_portfolio_aware_safe.py       # Final leakage-aware, single-portfolio model
+├── self_test_portfolios.py                # Score already-generated portfolios by window
+└── sweep_portfolio_aware_checked.py       # Historical portfolio-configuration sweep
+
 
 # Local/generated rather than committed:
 # data/ (prices.parquet, index.parquet, constituents.csv, optional extra data)
