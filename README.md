@@ -43,9 +43,6 @@ csi500-stock-selection/
 ├── self_test_portfolios.py                # Score already-generated portfolios by window
 └── sweep_portfolio_aware_checked.py       # Historical portfolio-configuration sweep
 
-
-# Local/generated rather than committed:
-# data/ (prices.parquet, index.parquet, constituents.csv, optional extra data)
 ```
 
 ### Main scripts
@@ -60,7 +57,7 @@ csi500-stock-selection/
 
 ### Organizer-provided code and attribution
 
-This project builds on the [NYUSH-ML Spring 2026 CSI500 competition starter repository](https://github.com/NYUSH-ML/ml-competition-sp26). The following **three files were byte-for-byte copies** of the organizer's `main` branch before reorganization (verified October 25, 2026). Two receive a minimal data-path change solely to support their new directory. They are **not original implementations** in this project:
+This project builds on the [NYUSH-ML Spring 2026 CSI500 competition starter repository](https://github.com/NYUSH-ML/ml-competition-sp26). The following three files are copies of the organizer's `main` branch. **Not original implementations** in this project.
 
 | File | Source and use |
 | --- | --- |
@@ -72,21 +69,14 @@ This project builds on the [NYUSH-ML Spring 2026 CSI500 competition starter repo
 
 See [`organizer/README.md`](organizer/README.md) for a provenance note and upstream supporting files such as `features.py`, `download_data.py`, and `requirements.txt`.
 
-### Results, intermediate artifacts, and documentation
+### Results and documentation
 
 | Path | Contents |
 | --- | --- |
 | [`results/final_self_ensemble.csv`](results/final_self_ensemble.csv) | **Final submitted Phase 2 portfolio**: 50 CSI500 stock codes and associated normalized portfolio weights (`stock_code`, `weight`). This is the key output stored in Git. |
-| `results/portfolio_sweep_checked_results.csv` | Generated detailed historical sweep results: per-window/per-configuration scores (not included in the current checkout). |
-| `results/portfolio_sweep_checked_summary.csv` | Generated configuration-level performance summary from the sweep (not included). |
-| `results/portfolio_sweep_checked_results.json` | Generated machine-readable sweep results (not included). |
-| `results/self_test_portfolio_results.csv` and `*_summary.csv` | Generated self-test tables when running `self_test_portfolios.py` (not included). |
 | [`intermediate/model_v2.py`](intermediate/model_v2.py) | Earlier LightGBM version with cross-sectional targets, robust loss, recency weighting, beta/regime features, and a five-seed ensemble; retained as development history, not the final model. |
-| `intermediate/candidates/` | Temporary CSV portfolios produced for individual ensemble configurations; generated on demand and ignored by Git. |
-| `intermediate/sweep_portfolios/` | Temporary portfolios from historical sweep runs; generated on demand and ignored by Git. |
-| `intermediate/diagnostics/` | Feature importances and ensemble consensus diagnostics; generated on demand and ignored by Git. |
 | [`docs/ML Competition Report.docx`](docs/ML%20Competition%20Report.docx) | Detailed technical report explaining the research progression, experimental decisions, test results, and caveats. |
-| [`docs/REPRODUCIBILITY_README.pdf`](docs/REPRODUCIBILITY_README.pdf) | Archived competition reproducibility instructions; **some paths refer to the original folder layout**. Use the commands in this README for the reorganized structure. |
+| [`docs/REPRODUCIBILITY_README.pdf`](docs/REPRODUCIBILITY_README.pdf) | Archived competition reproducibility instructions; Use the commands in this README. |
 
 ## Methodology
 
@@ -125,11 +115,13 @@ This targets relative stock selection rather than simply forecasting whether the
 
 The 240-run experiment swept five values of `top_k` (30, 40, 50, 60, 80), two training objectives (Huber and LambdaRank), three weighting methods (rank, equal, volatility-adjusted), two filter settings, and four historical evaluation windows. The highest mean in that sweep was **+1.643% excess** for the unfiltered top-30 Huber/rank strategy, but its worst window was **−0.662%**. The filtered variant achieved **+1.505% mean excess** with a smaller worst-window loss (**−0.260%**), so it was selected for Phase 1.
 
-For Phase 2, the workflow generated several related LightGBM configurations, combined their portfolio weights, retained the **50 strongest aggregate positions**, capped each position at 10%, and renormalized the total to one. This intentionally traded some concentration for stronger consensus and diversification.
+For Phase 2, the workflow generated several related LightGBM configurations, combined their portfolio weights, retained the **50 strongest aggregate positions**, capped each position at 10%, and renormalized the total to one. This intentionally traded some concentration for diversification to prevent overfitting on local signals.
 
 ## Running the pipeline
 
-**What is missing:** This public repository contains the project-specific code, three credited organizer scripts, and the final submission, **not** the competition's input market-data files. Provide the original data under `data/` before running inference, sweeps, or scoring. The organizer publishes [`download_data.py`](https://github.com/NYUSH-ML/ml-competition-sp26/blob/main/download_data.py), [`features.py`](https://github.com/NYUSH-ML/ml-competition-sp26/blob/main/features.py), and [`requirements.txt`](https://github.com/NYUSH-ML/ml-competition-sp26/blob/main/requirements.txt), but these are **not included** here. To run the unmodified organizer baseline, place the upstream `features.py` next to `organizer/baseline_xgboost.py` locally (or use the complete upstream checkout). Consequently, the checkout is an example of the research code and submitted artifact, not a complete one-command reproduction package.
+**What is missing:** This public repository does not contain the competition's input market-data files. See the organizer's published files: [`download_data.py`](https://github.com/NYUSH-ML/ml-competition-sp26/blob/main/download_data.py), [`features.py`](https://github.com/NYUSH-ML/ml-competition-sp26/blob/main/features.py), and [`requirements.txt`](https://github.com/NYUSH-ML/ml-competition-sp26/blob/main/requirements.txt).
+
+To run the unmodified organizer baseline, place the upstream `features.py` next to `organizer/baseline_xgboost.py` locally.
 
 1. From the repository root, install the applicable Python dependencies, including `numpy`, `pandas`, `pyarrow`, `scipy`, `lightgbm`, and (for optional extra-data fetching) `akshare`. The older XGBoost baseline additionally needs `xgboost` and its missing `features.py` module.
 2. Place the competition-provided `prices.parquet`, `index.parquet`, and `constituents.csv` in `data/` in the formats expected by the source scripts.
@@ -160,11 +152,10 @@ python sweep_portfolio_aware_checked.py \
   --weight-methods rank vol_adjusted equal \
   --filter-modes none filter --no-ensemble
 ```
+Specify a different `--final-out` to save the competition portfolio.  
 
-The ensemble script's defaults now write **candidate CSVs to `intermediate/candidates/`** and its final output to `results/final_self_ensemble.csv`; if you want to preserve the tracked competition submission, specify a different `--final-out` as in the example above. Sweeps write temporary portfolios to `intermediate/sweep_portfolios/` and score tables to `results/`. The ensemble generator, sweep runner, and self-test wrapper default to calling `organizer/validate_submission.py` and/or `organizer/score_submission.py`. Invoke commands from the repository root.
+## Limitations
 
-## Limitations and Credits
-
-Only four independent historical windows were used for the comparisons, and choosing among many tested configurations increases selection/overfitting risk. Real trading would also require explicit modeling of transaction costs, slippage, liquidity, and market impact. External financial data availability was inconsistent. This is a competition research project, **not trading or investment advice**.
+Only four independent historical windows were used for the comparisons, and choosing among many tested configurations increases selection/overfitting risk. Real trading would also require explicit modeling of transaction costs, slippage, liquidity, and market impact. External financial data availability was inconsistent. 
 
 Organizer-provided code is credited above. The prediction models were trained on historical market data, and portfolio weights were generated by the program rather than prompting an LLM to choose stocks.
